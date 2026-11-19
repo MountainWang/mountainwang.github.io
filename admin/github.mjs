@@ -38,7 +38,8 @@ export async function repository(session) {
 }
 
 export async function file(repo, path, ref) {
-    const result = await github(repo.token, `${repo.path}/contents/${path}?ref=${encodeURIComponent(ref)}`);
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const result = await github(repo.token, `${repo.path}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`);
     if (result.type !== 'file' || result.encoding !== 'base64') throw fail(409, '仓库文件格式不受支持');
     return decodeBase64(result.content);
 }

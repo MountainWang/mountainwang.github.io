@@ -1,5 +1,5 @@
 import { file, github, inspect, listArticles, siteOrigin } from './github.mjs';
-import { article, fail, homeScriptPath, layoutPaths, listing, siteConfigPath } from './site.mjs';
+import { article, escapeHtml, fail, homeScriptPath, layoutPaths, listing, siteConfigPath } from './site.mjs';
 
 const outputBranch = 'gh-pages';
 const outputRef = 'refs/heads/' + outputBranch;
@@ -20,18 +20,32 @@ function publishedPath(path, home) {
     return null;
 }
 
+function versionedHtml(html, head) {
+    const footer = `<footer class="site-version">版本 <code>${escapeHtml(head.slice(0, 8))}</code></footer>`;
+    const closingTag = html.match(/<\/body\s*>\s*(?:<\/html\s*>\s*)?$/i) ?? html.match(/<\/html\s*>\s*$/i);
+    return closingTag ? html.slice(0, closingTag.index) + footer + '\n' + closingTag[0] : html + '\n' + footer + '\n';
+}
+
 export async function buildSite(repo, { head, tree, home, contentTree }) {
     const snapshot = await github(repo.token, `${repo.path}/git/trees/${tree}?recursive=1`);
     if (snapshot.truncated) throw fail(409, '仓库文件列表不完整，无法生成站点');
     const files = new Map();
     function add(entry) {
         if (files.has(entry.path)) throw fail(409, '发布路径冲突：' + entry.path);
+        if (typeof entry.content === 'string' && /\.html?$/i.test(entry.path)) {
+            entry = { ...entry, content: versionedHtml(entry.content, head) };
+        }
         files.set(entry.path, { mode: '100644', type: 'blob', ...entry });
     }
     for (const entry of snapshot.tree) {
         if (entry.type !== 'blob' || !['100644', '100755'].includes(entry.mode)) continue;
         const path = publishedPath(entry.path, home);
-        if (path) add({ path, sha: entry.sha });
+        if (!path) continue;
+        if (/\.html?$/i.test(path) && !layoutPaths.includes(path)) {
+            add({ path, content: await file(repo, entry.path, head) });
+        } else {
+            add({ path, sha: entry.sha });
+        }
     }
     for (const path of outputAssets) {
         if (!files.has(path)) throw fail(409, '缺少发布模板文件：templates/' + path);
