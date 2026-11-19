@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="script-src 'self'; connect-src https://api.github.com; object-src 'none'; form-action 'none'">
     <title>文章编辑器</title>
     <link rel="stylesheet" href="style.css">
-    <script type="module" src="editor.js"></script>
+    <script src="bootstrap.js" defer></script>
 </head>
 <body>
 <header class="masthead">
@@ -21,16 +21,16 @@
 </header>
 <main>
     <div class="feedback">
-        <div id="status" role="status" aria-live="polite"></div>
+        <div id="status" role="status" aria-live="polite">正在加载编辑器…</div>
         <button id="retry" type="button" hidden>重新检查仓库</button>
     </div>
     <form id="login" class="panel connection" autocomplete="off">
         <h2>连接 GitHub 仓库</h2>
         <p>使用仅授权你的 GitHub Pages 仓库的令牌。</p>
         <label for="token">GitHub 令牌</label>
-        <input id="token" type="password" autocomplete="off" spellcheck="false" required>
+        <input id="token" type="password" autocomplete="off" spellcheck="false" required disabled>
         <div class="connection-actions">
-            <button class="primary" type="submit">连接仓库</button>
+            <button id="connect" class="primary" type="submit" disabled>连接仓库</button>
             <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建令牌</a>
         </div>
     </form>
