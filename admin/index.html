@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'; connect-src https://api.github.com; object-src 'none'; form-action 'none'">
+    <title>文章编辑器</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="editor.js"></script>
+</head>
+<body>
+<header class="masthead">
+    <div class="masthead-inner">
+        <h1>文章编辑器</h1>
+        <nav aria-label="站点导航">
+            <a href="../">博客首页</a>
+            <button id="logout" type="button" hidden>退出登录</button>
+        </nav>
+    </div>
+</header>
+<main>
+    <div class="feedback">
+        <div id="status" role="status" aria-live="polite"></div>
+        <button id="retry" type="button" hidden>重新检查仓库</button>
+    </div>
+    <form id="login" class="panel connection" autocomplete="off">
+        <h2>连接 GitHub 仓库</h2>
+        <p>使用仅授权你的 GitHub Pages 仓库的令牌。</p>
+        <label for="token">GitHub 令牌</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false" required>
+        <div class="connection-actions">
+            <button class="primary" type="submit">连接仓库</button>
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">创建令牌</a>
+        </div>
+    </form>
+    <section id="setup" class="panel setup" hidden>
+        <h2 id="setup-title">初始化博客</h2>
+        <p id="setup-message"></p>
+        <ul id="paths"></ul>
+        <form id="initialize" hidden>
+            <label for="site-title">站点标题</label>
+            <input id="site-title" maxlength="100" required>
+            <button id="migrate" class="primary" type="submit">初始化博客</button>
+        </form>
+    </section>
+    <section id="editor" class="workspace" hidden>
+        <aside class="panel library" aria-label="文章管理">
+            <label for="articles">已发布文章</label>
+            <select id="articles"></select>
+            <button id="new" type="button">新建文章</button>
+            <button id="rebuild" type="button">重新发布站点</button>
+        </aside>
+        <div class="panel manuscript">
+            <form id="publish">
+                <div class="metadata">
+                    <label for="title">标题<input id="title" maxlength="160" required placeholder="文章标题"></label>
+                    <label for="slug">文章标识<input id="slug" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" required placeholder="my-first-post"></label>
+                </div>
+                <div class="panes">
+                    <div class="pane">
+                        <div class="pane-header">
+                            <label for="source">Markdown</label>
+                            <div id="format" class="format" aria-label="Markdown 格式">
+                                <button type="button" data-format="heading" aria-label="插入标题" title="标题">H</button>
+                                <button type="button" data-format="bold" aria-label="插入粗体" title="粗体"><strong>B</strong></button>
+                                <button type="button" data-format="italic" aria-label="插入斜体" title="斜体"><em>I</em></button>
+                                <button type="button" data-format="code" aria-label="插入行内代码" title="行内代码"><code>&lt;/&gt;</code></button>
+                            </div>
+                        </div>
+                        <textarea id="source" maxlength="250000" rows="18" placeholder="输入 Markdown 或拖入图片"></textarea>
+                    </div>
+                    <div class="pane">
+                        <div class="pane-header">预览</div>
+                        <iframe id="preview" title="文章预览" sandbox></iframe>
+                    </div>
+                </div>
+                <div class="publish-actions">
+                    <label class="file-button">添加图片<input id="images" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" aria-label="添加图片" aria-describedby="image-message"></label>
+                    <button class="primary" type="submit">提交并发布</button>
+                </div>
+                <p id="image-message" role="alert"></p>
+            </form>
+            <p id="result" role="status"></p>
+        </div>
+    </section>
+</main>
+<div id="operation" role="status" aria-atomic="true"></div>
+</body>
+</html>
