@@ -175,6 +175,24 @@ export async function saveArticle(repo, body) {
     return { ...commit, post };
 }
 
+export async function deleteArticle(repo, slug, head) {
+    if (!validSlug(slug)) throw fail(400, '文章标识无效');
+    const status = await inspect(repo);
+    if (status.state !== 'ready' || status.head !== head) {
+        throw fail(409, '分支已更新，请重新载入文章后再删除');
+    }
+
+    const snapshot = await github(repo.token, `${repo.path}/git/trees/${status.tree}?recursive=1`);
+    if (snapshot.truncated) throw fail(409, '仓库文件列表不完整，无法确认文章和图片');
+    const source = `content/${slug}.md`;
+    if (!snapshot.tree.some(entry => entry.type === 'blob' && entry.path === source)) {
+        throw fail(404, '找不到要删除的文章');
+    }
+    const imageDirectory = `assets/images/${slug}/`;
+    const images = snapshot.tree.filter(entry => entry.type === 'blob' && entry.path.startsWith(imageDirectory));
+    return commitFiles(repo, head, {}, 'Delete ' + slug, [source, ...images.map(entry => entry.path)]);
+}
+
 export async function siteOrigin(repo, head) {
     try {
         if (!head) return 'https://' + repo.owner.login + '.github.io';

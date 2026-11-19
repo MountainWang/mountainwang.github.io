@@ -1,4 +1,4 @@
-import { connect, loadArticle, loadStatus, saveArticle, repository as getRepository } from './github.mjs';
+import { connect, deleteArticle, loadArticle, loadStatus, saveArticle, repository as getRepository } from './github.mjs';
 import { deploySite } from './deploy.mjs';
 import { imageAsset, render } from './site.mjs';
 
@@ -9,6 +9,7 @@ const title = byId('title');
 const status = byId('status');
 const operation = byId('operation');
 const articles = byId('articles');
+const deleteButton = byId('delete-article');
 const imageInput = byId('images');
 const imageMessage = byId('image-message');
 const assets = new Map();
@@ -166,16 +167,21 @@ function clearImages() {
     imageMessage.textContent = '';
 }
 
-byId('new').onclick = () => perform(async () => {
-    if (dirty && !confirm('放弃未提交的修改？')) return;
-    const result = await loadStatus(await getRepository(session));
-    showRepository(result);
+function clearDraft() {
     clearImages();
     source.value = title.value = slug.value = '';
     slug.readOnly = false;
     editing = false;
-    byId('result').replaceChildren();
+    deleteButton.hidden = true;
     dirty = false;
+}
+
+byId('new').onclick = () => perform(async () => {
+    if (dirty && !confirm('放弃未提交的修改？')) return;
+    const result = await loadStatus(await getRepository(session));
+    showRepository(result);
+    clearDraft();
+    byId('result').replaceChildren();
     preview();
 }, { message: '正在刷新文章列表…' });
 
@@ -190,6 +196,7 @@ articles.onchange = () => perform(async () => {
     slug.readOnly = true;
     title.value = post.title;
     editing = true;
+    deleteButton.hidden = false;
     byId('result').replaceChildren();
     source.value = markdown;
     dirty = false;
@@ -250,6 +257,7 @@ function link(text, href) {
 }
 
 function showDeployment(deployment, articleSlug) {
+    byId('pending-publish').hidden = true;
     const destination = articleSlug ? `/posts/${articleSlug}.html` : deployment.home;
     const message = deployment.created
         ? '已创建 gh-pages。请在 Settings → Pages 选择从 gh-pages 根目录发布。'
@@ -257,6 +265,34 @@ function showDeployment(deployment, articleSlug) {
     byId('result').append(message + ' ', link('查看产物提交', deployment.url),
         ' · ', link(articleSlug ? '打开文章' : '打开站点', new URL(destination, deployment.site).href));
 }
+
+async function deployAfterSourceChange(repo, commit, message, articleSlug) {
+    byId('result').replaceChildren(message + ' ', link('查看源码提交', commit.url), ' · ');
+    operation.textContent = message + ' 正在构建整站并更新 gh-pages…';
+    try {
+        showDeployment(await deploySite(repo, commit.oid), articleSlug);
+    } catch (error) {
+        byId('result').append('站点发布失败。' + error.message + ' 可点击「重新发布站点」重试。');
+    }
+}
+
+deleteButton.onclick = () => {
+    if (busy || !editing) return;
+    const selected = repository.posts.find(post => post.slug === slug.value);
+    if (!selected) return;
+    const warning = dirty ? '未提交的修改也会丢弃。' : '';
+    if (!confirm(`确定删除「${selected.title}」及其上传的图片？${warning}`)) return;
+    perform(async () => {
+        const repo = await getRepository(session);
+        const commit = await deleteArticle(repo, selected.slug, repository.head);
+        repository.head = commit.oid;
+        repository.posts = repository.posts.filter(post => post.slug !== selected.slug);
+        clearDraft();
+        showRepository(repository);
+        byId('result').replaceChildren('文章和图片已从源码分支删除。', link('查看源码提交', commit.url));
+        byId('pending-publish').hidden = false;
+    }, { message: '正在删除文章和图片…', errorTarget: byId('result') });
+};
 
 byId('rebuild').onclick = () => perform(async () => {
     byId('result').replaceChildren();
@@ -276,20 +312,15 @@ byId('publish').onsubmit = event => {
         });
         dirty = false;
         slug.readOnly = true;
-        byId('result').replaceChildren('源码已保存。', link('查看源码提交', commit.url), ' · ');
         editing = true;
+        deleteButton.hidden = false;
         repository.head = commit.oid;
         repository.posts = [commit.post,
             ...repository.posts.filter(post => post.slug !== slug.value)]
             .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.slug.localeCompare(b.slug));
         showRepository(repository);
         articles.value = slug.value;
-        operation.textContent = '源码已保存，正在构建整站并更新 gh-pages…';
-        try {
-            showDeployment(await deploySite(repo, commit.oid), slug.value);
-        } catch (error) {
-            byId('result').append('站点发布失败。' + error.message + ' 可点击「重新发布站点」重试。');
-        }
+        await deployAfterSourceChange(repo, commit, '源码已保存。', slug.value);
     }, { message: '正在保存文章源码…', errorTarget: byId('result') });
 };
 
