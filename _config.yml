@@ -1,0 +1,5 @@
+exclude:
+  - tests/
+  - content/
+  - token
+  - templates/

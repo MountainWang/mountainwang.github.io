@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{post-title}}</title>
+    <link rel="stylesheet" href="/blog.css">
+</head>
+<body>
+    <main class="site">
+        <header class="site-nav" data-article-fragment="/article-header.html">
+            <nav aria-label="站点导航"><a href="/">首页</a></nav>
+        </header>
+        <article class="article">
+            <h1>{{post-title}}</h1>
+            <div class="prose">{{post-content}}</div>
+        </article>
+        <footer class="article-footer" data-article-fragment="/article-footer.html"></footer>
+        <script src="/article-layout.js" defer></script>
+    </main>
+</body>
+</html>

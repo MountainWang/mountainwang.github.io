@@ -1,0 +1,37 @@
+:root {
+    color-scheme: light dark;
+    font: 1rem/1.7 system-ui, sans-serif;
+    --surface: #f6f8fb;
+    --ink: #16243a;
+    --muted: #516179;
+    --accent: #2356a9;
+    --border: #d7e0ed;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface); color: var(--ink); }
+.site { width: min(46rem, 100% - 2.5rem); margin: auto; padding-block: clamp(2.5rem, 9vw, 7rem); }
+h1 { margin: 0; font-size: clamp(2.4rem, 7vw, 4.4rem); line-height: 1.1; font-weight: 750; letter-spacing: -.035em; overflow-wrap: anywhere; }
+a { color: var(--accent); text-underline-offset: .2em; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: .25rem; }
+.site-header { padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+.posts { margin: 0; padding: 0; list-style: none; }
+.posts li { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: .2rem 1rem; padding-block: 1.1rem; border-bottom: 1px solid var(--border); }
+.posts a { color: var(--ink); font-size: 1.2rem; font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.posts time { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.posts a:hover { color: var(--accent); text-decoration: underline; }
+.empty { margin-top: 1.25rem; color: var(--muted); }
+.site-nav { margin-bottom: 2rem; }
+.article-footer:not(:empty) { margin-top: 2rem; color: var(--muted); }
+.article h1 { margin-bottom: 1.5rem; }
+.prose { overflow-wrap: anywhere; }
+.prose :is(h2, h3, h4) { margin: 2rem 0 .6rem; line-height: 1.25; }
+img { max-width: 100%; height: auto; border-radius: .4rem; }
+pre { overflow: auto; padding: 1rem; border: 1px solid var(--border); border-radius: .5rem; }
+blockquote { margin-inline: 0; padding-inline-start: 1rem; border-inline-start: 3px solid var(--border); color: var(--muted); }
+table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+th, td { padding: .4rem .7rem; border: 1px solid var(--border); }
+
+@media (prefers-color-scheme: dark) {
+    :root { --surface: #121c2b; --ink: #ecf1f8; --muted: #aab9ce; --accent: #9abfff; --border: #364862; }
+}
