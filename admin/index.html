@@ -50,6 +50,7 @@
             <select id="articles"></select>
             <button id="new" type="button">新建文章</button>
             <button id="rebuild" type="button">重新发布站点</button>
+            <p id="pending-publish" role="status" hidden>删除已保存到源码分支。完成后点击「重新发布站点」，将删除同步到线上。</p>
         </aside>
         <div class="panel manuscript">
             <form id="publish">
@@ -77,7 +78,10 @@
                 </div>
                 <div class="publish-actions">
                     <label class="file-button">添加图片<input id="images" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" aria-label="添加图片" aria-describedby="image-message"></label>
-                    <button class="primary" type="submit">提交并发布</button>
+                    <div class="article-actions">
+                        <button id="delete-article" class="danger" type="button" hidden>删除文章</button>
+                        <button class="primary" type="submit">提交并发布</button>
+                    </div>
                 </div>
                 <p id="image-message" role="alert"></p>
             </form>

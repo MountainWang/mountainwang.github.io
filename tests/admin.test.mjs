@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { commitFiles, connect, initialize, inspect, loadArticle, loadStatus, migrate, repository, saveArticle } from '../admin/github.mjs';
+import { commitFiles, connect, deleteArticle, initialize, inspect, loadArticle, loadStatus, migrate, repository, saveArticle } from '../admin/github.mjs';
 import { deploySite } from '../admin/deploy.mjs';
 import { articleTemplate, base64, decodeBase64, formatPost, homeTemplate, imageAsset, parsePost, render } from '../admin/site.mjs';
 
@@ -159,6 +159,44 @@ test('saves only source files and preserves the original publication date', asyn
     const edited = await saveArticle(repo, { ...draft, title: '修改后的标题', editing: true });
     assert.equal(edited.post.title, '修改后的标题');
     assert.equal(edited.post.publishedAt, originalPost.publishedAt);
+});
+
+test('deletes the article and only its own images in one guarded source commit', async t => {
+    let writes = 0;
+    mockFetch(t, (path, options) => {
+        if (path === '/graphql') {
+            writes++;
+            const { variables: { input } } = JSON.parse(options.body);
+            assert.equal(input.branch.branchName, 'main');
+            assert.equal(input.expectedHeadOid, 'base');
+            assert.deepEqual(input.fileChanges, {
+                additions: [],
+                deletions: [
+                    { path: 'content/test.md' },
+                    { path: 'assets/images/test/one.png' },
+                    { path: 'assets/images/test/gallery/two.jpg' }
+                ]
+            });
+            return { body: { data: { createCommitOnBranch: { commit: { oid: 'next' } } } } };
+        }
+        if (path.includes('/git/ref/')) return { body: { object: { sha: 'base' } } };
+        if (path.includes('/git/commits/')) return { body: { tree: { sha: 'tree' } } };
+        if (path.includes('/git/trees/')) {
+            return { body: { tree: [
+                '.site-config.json', 'content/test.md', 'content/test-other.md',
+                'assets/images/test/one.png', 'assets/images/test/gallery/two.jpg',
+                'assets/images/test-other/one.png', 'public/resume.pdf'
+            ].map(path => ({ path, type: 'blob' })) } };
+        }
+        assert.ok(path.endsWith('/.site-config.json'));
+        return { body: { type: 'file', encoding: 'base64', content: base64('{"version":1,"home":"index.html"}') } };
+    });
+    await assert.rejects(deleteArticle(repo, '../test', 'base'), { status: 400 });
+    await assert.rejects(deleteArticle(repo, 'test', 'stale'), { status: 409 });
+    await assert.rejects(deleteArticle(repo, 'missing', 'base'), { status: 404 });
+    assert.equal(writes, 0);
+    assert.equal((await deleteArticle(repo, 'test', 'base')).oid, 'next');
+    assert.equal(writes, 1);
 });
 
 test('builds a complete Pages tree and creates or advances the output branch', async t => {
