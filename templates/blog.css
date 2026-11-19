@@ -32,6 +32,8 @@ blockquote { margin-inline: 0; padding-inline-start: 1rem; border-inline-start: 
 table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
 th, td { padding: .4rem .7rem; border: 1px solid var(--border); }
 
+.site-version { padding: 1rem; text-align: center; color: var(--muted); font-size: .85rem; }
+
 @media (prefers-color-scheme: dark) {
     :root { --surface: #121c2b; --ink: #ecf1f8; --muted: #aab9ce; --accent: #9abfff; --border: #364862; }
 }

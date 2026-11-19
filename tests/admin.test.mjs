@@ -200,6 +200,7 @@ test('deletes the article and only its own images in one guarded source commit',
 });
 
 test('builds a complete Pages tree and creates or advances the output branch', async t => {
+    const sourceHead = '12345678abcdef0123456789abcdef0123456789';
     let previous;
     let moved = false;
     let changed = false;
@@ -207,25 +208,27 @@ test('builds a complete Pages tree and creates or advances the output branch', a
     const sourcePaths = [
         '.site-config.json', 'templates', 'templates/blog.css', 'templates/site-home.js',
         'templates/article-header.html', 'templates/article-footer.html', 'templates/article-layout.js',
-        'admin/index.html', 'assets/images/test/image.png', 'content/test.md', 'public/resume.pdf', 'public/简历.pdf'
+        'admin/index.html', 'assets/images/test/image.png', 'content/test.md', 'public/resume.pdf', 'public/简历.pdf', 'public/说明.html'
     ];
     const contents = {
         '.site-config.json': '{"version":1,"home":"index.html","siteTitle":"本站"}',
         'templates/index.html': homeTemplate(),
         'templates/article.html': articleTemplate('index.html'),
         'content/test.md': formatPost({ title: '原标题', publishedAt: '2026-11-19T14:55:23.000Z' }, '你好 ![图](../assets/images/test/image.png)'),
+        'admin/index.html': '<!doctype html><html><body><main>Editor</main></body></html>',
+        'public/说明.html': '<!doctype html><html><body><main>说明</main></body></html>',
         'CNAME': 'example.org'
     };
     mockFetch(t, (path, options) => {
         const { method } = options;
         if (path.endsWith('/git/ref/heads/main')) {
             sourceReads++;
-            return { body: { object: { sha: changed && sourceReads === 2 ? 'new-source' : 'source' } } };
+            return { body: { object: { sha: changed && sourceReads === 2 ? 'new-source' : sourceHead } } };
         }
         if (path.endsWith('/git/ref/heads/gh-pages')) {
             return previous ? { body: { object: { sha: previous } } } : { status: 404 };
         }
-        if (path.endsWith('/git/commits/source')) return { body: { tree: { sha: 'tree' } } };
+        if (path.endsWith('/git/commits/' + sourceHead)) return { body: { tree: { sha: 'tree' } } };
         if (path.endsWith('/git/trees/tree')) {
             return { body: { tree: [
                 { path: 'content', type: 'tree', sha: 'content-tree' },
@@ -245,7 +248,11 @@ test('builds a complete Pages tree and creates or advances the output branch', a
             assert.match(files['posts/test.html'].content, /<h1>原标题<\/h1>/);
             assert.doesNotMatch(files['posts/test.html'].content, /publishedAt:/);
             assert.equal(files['assets/images/test/image.png'].sha, 'assets/images/test/image.png-sha');
-            assert.equal(files['admin/index.html'].sha, 'admin/index.html-sha');
+            for (const path of ['index.html', 'posts/test.html', 'admin/index.html', '说明.html']) {
+                assert.match(files[path].content, /<footer class="site-version">版本 <code>12345678<\/code><\/footer>\s*<\/body>/);
+                assert.ok(!files[path].content.includes(sourceHead));
+            }
+            assert.equal(files['article-footer.html'].sha, 'templates/article-footer.html-sha');
             assert.equal(files['resume.pdf'].sha, 'public/resume.pdf-sha');
             assert.equal(files['简历.pdf'].sha, 'public/简历.pdf-sha');
             assert.equal(files['public/resume.pdf'], undefined);
@@ -259,7 +266,7 @@ test('builds a complete Pages tree and creates or advances the output branch', a
         if (path.endsWith('/git/commits')) {
             const commit = JSON.parse(options.body);
             assert.deepEqual(commit.parents, previous ? [previous] : []);
-            assert.match(commit.message, /Deploy main source/);
+            assert.equal(commit.message, 'Deploy main ' + sourceHead);
             return { body: { sha: 'output-commit', html_url: 'https://github.com/example' } };
         }
         if (path.includes('/git/refs')) {
@@ -270,18 +277,18 @@ test('builds a complete Pages tree and creates or advances the output branch', a
             moved = true;
             return { body: {} };
         }
-        const key = path.split('/contents/')[1];
+        const key = decodeURIComponent(path.split('/contents/')[1] ?? '');
         if (Object.hasOwn(contents, key)) return { body: { type: 'file', encoding: 'base64', content: base64(contents[key]) } };
         throw new Error('Unexpected request: ' + path);
     });
     const { posts } = await loadStatus(repo);
     assert.deepEqual(posts, [{ slug: 'test', title: '原标题', publishedAt: '2026-11-19T14:55:23.000Z' }]);
-    assert.equal(await loadArticle(repo, 'test', 'source'), '你好 ![图](../assets/images/test/image.png)');
+    assert.equal(await loadArticle(repo, 'test', sourceHead), '你好 ![图](../assets/images/test/image.png)');
     assert.equal((await deploySite(repo)).created, true);
     assert.equal(moved, true);
     previous = 'last-deploy';
     moved = false;
-    assert.equal((await deploySite(repo, 'source')).site, 'https://example.org');
+    assert.equal((await deploySite(repo, sourceHead)).site, 'https://example.org');
     assert.equal(moved, true);
     moved = false;
     changed = true;
